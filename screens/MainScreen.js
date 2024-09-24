@@ -4,7 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { CartContext } from './CartContext';
 import { db } from '../config/FireBaseConfig';
-import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore'; // Import Firestore methods
+import { collection, onSnapshot } from 'firebase/firestore'; // Import Firestore methods
 
 const { width } = Dimensions.get('window');
 
@@ -17,13 +17,6 @@ const categories = [
   { id: '6', image: 'https://images.pexels.com/photos/13620783/pexels-photo-13620783.jpeg', name: 'Beans' }
 ];
 
-const cropCards = [
-  { id: '1', image: 'https://images.pexels.com/photos/54084/wheat-grain-agriculture-seed-54084.jpeg', name: 'Wheat', price: 30, description: 'High quality wheat grains from MP.' },
-  { id: '2', image: 'https://images.pexels.com/photos/16732706/pexels-photo-16732706/free-photo-of-fresh-corns-at-the-market.jpeg', name: 'Maize', price: 25, description: 'Fresh maize from Karnataka.' },
-  { id: '3', image: 'https://images.pexels.com/photos/3735174/pexels-photo-3735174.jpeg', name: 'Soyabean', price: 40, description: 'Nutrient-rich soyabean from Maharashtra.' },
-  { id: '4', image: 'https://images.pexels.com/photos/2254097/pexels-photo-2254097.jpeg', name: 'Sugarcane', price: 20, description: 'Sweet and fresh sugarcane from UP.' }
-];
-
 const numColumns = 3;
 
 export default function HomeScreen() {
@@ -31,7 +24,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const { addToCart } = useContext(CartContext);
   const [products, setProducts] = useState([]);
-  const [filteredCropCards, setFilteredCropCards] = useState(cropCards);
+  const [filteredProducts, setFilteredProducts] = useState([]);
 
   // Fetch products from Firestore
   useEffect(() => {
@@ -41,6 +34,7 @@ export default function HomeScreen() {
         ...doc.data(),
       }));
       setProducts(productList);
+      setFilteredProducts(productList); // Initialize filteredProducts with all products
     }, (error) => {
       console.error("Error fetching products: ", error);
     });
@@ -48,17 +42,18 @@ export default function HomeScreen() {
     return () => unsubscribe(); // Clean up the subscription on unmount
   }, []);
 
+  // Filter products based on search query
   useEffect(() => {
     if (searchQuery === '') {
-      setFilteredCropCards(cropCards);
+      setFilteredProducts(products); // Show all products if search query is empty
     } else {
-      setFilteredCropCards(
-        cropCards.filter(card =>
-          card.name.toLowerCase().includes(searchQuery.toLowerCase())
+      setFilteredProducts(
+        products.filter(product =>
+          product.name.toLowerCase().includes(searchQuery.toLowerCase())
         )
       );
     }
-  }, [searchQuery]);
+  }, [searchQuery, products]);
 
   const renderCategoryItem = ({ item }) => (
     <TouchableOpacity style={styles.categoryItem} onPress={() => {
@@ -75,7 +70,7 @@ export default function HomeScreen() {
       <View style={styles.cardContent}>
         <Text style={styles.cardName}>{item.name}</Text>
         <Text style={styles.cardPrice}>₹{item.price.toFixed(2)}/kg</Text>
-        <Text style={styles.cardDescription}>{item.description}</Text>
+        <Text style={styles.cardDescription}>{item.category}</Text>
         <TouchableOpacity style={styles.addToCartButton} onPress={() => addToCart(item)}>
           <Ionicons name="cart" size={24} color="#fff" />
           <Text style={styles.addToCartText}>Add to Cart</Text>
@@ -92,10 +87,7 @@ export default function HomeScreen() {
           <Text style={styles.appName}>Namaste 🙏</Text>
           <View style={styles.navBarRight}>
             <TouchableOpacity style={styles.cartButton} onPress={() => navigation.navigate('Cart')}>
-              <Image
-                source={{ uri: 'https://thumbs.dreamstime.com/b/white-flat-shopping-cart-icon-green-background-ill-white-flat-shopping-cart-icon-green-background-illustration-100582536.jpg' }}
-                style={styles.profileImage}
-              />
+            <Ionicons name="cart" size={32} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('Profile')}>
               <Image
@@ -112,7 +104,7 @@ export default function HomeScreen() {
             <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search the category"
+              placeholder="Search products"
               placeholderTextColor="#888"
               value={searchQuery}
               onChangeText={text => setSearchQuery(text)}
@@ -137,7 +129,7 @@ export default function HomeScreen() {
         {/* Cards */}
         <View style={styles.cardsContainer}>
           <FlatList
-            data={products}
+            data={filteredProducts} // Use filtered products for rendering
             renderItem={renderCardItem}
             keyExtractor={item => item.id}
             numColumns={2}
@@ -189,7 +181,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#4CAF50',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -258,10 +250,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     width: width / 2 - 20,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#4CAF50'
   },
   cardImage: {
-    width: '100%',
+    width: 150,
     height: 150,
+    margin: 10,
+    borderTopRightRadius: 10,
+    borderTopLeftRadius: 10
   },
   cardContent: {
     padding: 10,
